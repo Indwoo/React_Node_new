@@ -6,12 +6,14 @@ const config = require('./config/key')
 const { User } = require('./models/User')
 const { auth } = require('./middleware/auth')
 const cookieParser = require('cookie-parser')
+const cors = require('cors')
 
 app.use(bodyParser.urlencoded({extended: true}));
 
 app.use(bodyParser.json());
 app.use(cookieParser());
 
+app.use(cors());
 
 const mongoose = require('mongoose')
 mongoose.connect(config.mongoURI,
