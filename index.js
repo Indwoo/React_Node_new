@@ -3,6 +3,7 @@ const app = express();
 const port = 5000;
 const bodyParser = require('body-parser');
 const { User } = require('./models/User')
+const config = require('./config/key') 
 
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -10,7 +11,7 @@ app.use(bodyParser.json());
 
 
 const mongoose = require('mongoose')
-mongoose.connect('mongodb+srv://Indwoo:0504@cluster0.5zredre.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+mongoose.connect(config.mongoURI,
 {}).then(() => console.log('MongoDB Connected...'))
 .catch(err => console.log(err))
 
