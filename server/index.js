@@ -7,6 +7,7 @@ const { User } = require('./models/User')
 const { auth } = require('./middleware/auth')
 const cookieParser = require('cookie-parser')
 const cors = require('cors')
+const { comparePassword } = require('./models/User');
 
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -15,7 +16,8 @@ app.use(cookieParser());
 
 app.use(cors());
 
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const { compare } = require('bcrypt');
 mongoose.connect(config.mongoURI,
 {}).then(() => console.log('MongoDB Connected...'))
 .catch(err => console.log(err))
@@ -45,44 +47,43 @@ app.post('/api/users/register', (req, res) => {
     })
 })
 
-app.post('/api/users/login', (req, res) => {
-    // 요청된 이메일을 데이터베이스에서 있는지 찾는다.
-    User.findOne({
-        email: req.body.email
-    })
-    .then (async (user) => {
-        if (!user) {
-            throw new Error("제공된 이메일에 해당하는 유저가 없습니다.")
-        }
-        // 비밀번호가 일치하는지 확인
-        const isMatch = await user.comparePassword(req.body.password);
-        return { isMatch, user };
-    })
-    .then(({ isMatch, user }) => {
-        console.log(isMatch);
-        if (!isMatch) {
-            throw new Error("비밀번호가 틀렸습니다.")
-        }
-        // 로그인 완료
-        return user.generateToken();
-    })
-    .then ((user) => {
-        // 토큰 저장 (쿠키, localstorage ...)
-        return res.cookie("x_auth", user.token)
+
+
+app.post("/api/users/login", async (req, res) => {
+    try {
+      // 같은 이메일의 유저가 있는지 확인
+      const user = await User.findOne({ email: req.body.email });
+      console.log('로그인 유저 확인');
+  
+      if (!user) {
+        return res.json({
+          loginSuccess: false,
+          message: "제공된 이메일에 해당하는 유저가 없습니다.",
+        });
+      }
+  
+      // 비밀번호 확인
+      const isMatch = await user.comparePassword(req.body.password);
+      console.log('비밀번호 확인');
+      if (!isMatch) {
+        console.log('비밀번호가 틀렸습니다.') 
+        return res.json({
+          loginSuccess: false,
+          message: "비밀번호가 틀렸습니다.",
+        });
+      }
+  
+      // 토큰 쿠키에 저장
+      const userdata = await user.generateToken();
+      // 토큰을 저장한다. 어디에? 쿠키, 로컬스토리지
+      res
+        .cookie("x_auth", userdata.token)
         .status(200)
-        .json({
-            loginSuccess: true,
-            userId: user._id
-        });
-    })
-    .catch ((err) => {
-        console.log(err);
-        return res.status(400).json({
-            loginSuccess: false,
-            message: err.message
-        });
-    })
-})
+        .json({ loginSuccess: true, userId: userdata._id });
+    } catch (err) {
+      return res.status(400).send(err);
+    }
+  });
 
 app.get('/api/users/auth', auth, (req, res) => {
     // 여기까지 미들웨어를 통과해 왔다는 얘기는 Authentication이 true라는 말

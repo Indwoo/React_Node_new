@@ -57,20 +57,28 @@ userSchema.pre('save', function(next) {
     }
 })
 
-userSchema.methods.comparePassword = function(plainPassword, cb) {
-    // 암호화된 비밀번호와 같은지 체크
-    const user = this;
-    return bcrypt.compare(plainPassword, this.password)
-}
+userSchema.methods.comparePassword = function (plainPassword) {
+    // plainpassword와 db에 암호화된 비밀번호가 같은지 확인
+    const result = bcrypt.compare(plainPassword, this.password);
+    return result;
+  };
 
-userSchema.methods.generateToken = function(cb) {
-    // jwt 생성
-    user = this;
-    const token = jwt.sign(user._id.toJSON(), 'secretToken');
+  userSchema.methods.generateToken = async function (cb) {
+    var user = this;
+    // jsonwebtoken을 이용해서 token을 생성하기
+    var token = jwt.sign(user._id.toHexString(), "secretToken");
+    // user._id(db의 _id) + secreToken = token
+    // token으로 user를 판별할 수 있다.
+    // user.token = token;
     user.token = token;
-
-    return user.save();
-}
+  
+    try {
+      const savedUser = await user.save();
+      return user;
+    } catch (err) {
+      return err;
+    }
+  };
 
 userSchema.statics.findByToken = function(token, cb) {
     const user = this;
